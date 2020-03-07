@@ -1,16 +1,14 @@
 const db = require('../DAO/connection');
 exports.index = ( req, res ) => {
-  let sql = 'SELECT * FROM tasks';
+  let sql = 'SELECT * FROM tasks where deleted_at is null';
   if (req.query.status){
     if (req.query.status == 'pending') {
-      sql ='SELECT * FROM tasks where done = 0'      
+      sql ='SELECT * FROM tasks where done = 0 and deleted_at is null '      
     }else{
       if(req.query.status == 'finish')
-      sql ='SELECT * FROM tasks where done = 1'
+      sql ='SELECT * FROM tasks where done = 1 and deleted_at is null'
     }
   }
-      
-  
   db.connection.query(sql, (err,rows) => {
     if(err) throw err;
     res.json( {'tasks': rows })
@@ -27,9 +25,9 @@ exports.getTaskId = (req, res)=>{
 
 exports.storeTask=(req, res)=>{
   const {name, description, done} = req.body;
-  
-  db.connection.query(`INSERT INTO tasks (name, description, done)
-                       value ('${name}', '${description}',${done})`,
+  const created = time();
+  db.connection.query(`INSERT INTO tasks (name, description, done, created_at, update_at)
+                       value ('${name}', '${description}',${done}, '${created}', '${created}')`,
   (err,rows)=>{
     if(err){
       throw err;
@@ -37,9 +35,18 @@ exports.storeTask=(req, res)=>{
     res.json('se agrego')
   });
 }
+
+time =()=>{
+  const hoy = new Date();
+  var fecha = hoy.getFullYear() + '-'+ (hoy.getMonth()+1) +'-'+ hoy.getDate();
+  var hora = hoy.getHours()+':'+ hoy.getMinutes()+':'+hoy.getSeconds();
+  var created = fecha + ' ' + hora
+  return created;
+}
 exports.update = (req, res)=>{
   const { name, description} = req.body;
-  db.connection.query(`UPDATE  tasks SET name='${name}', description = '${description}' where id =${req.params.id} `,
+  const update = time();
+  db.connection.query(`UPDATE  tasks SET name='${name}', description = '${description}', update_at = '${update}' where id =${req.params.id} `,
   (err,rows)=>{
     if(err){
       throw err;
@@ -48,7 +55,8 @@ exports.update = (req, res)=>{
   });
 }
 exports.delete=(req,res)=>{
-  db.connection.query(`DELETE FROM tasks WHERE ID=${req.params.id}`, (err,rows)=>{
+  const deteled = time()
+  db.connection.query(`UPDATE  tasks SET  deleted_at = '${deteled}' where id =${req.params.id} `, (err,rows)=>{
     if(err) throw err;
     res.json('se elimino correctamente')
   })
